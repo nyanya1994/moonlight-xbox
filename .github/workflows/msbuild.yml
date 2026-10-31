@@ -20,6 +20,8 @@ env:
 jobs:
   build:
     runs-on: windows-2022
+    env:
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}\vcpkg-binary-cache,readwrite
     steps:
     - uses: actions/checkout@v4
       with:
@@ -29,20 +31,37 @@ jobs:
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
 
-    - name: Restore VCPKG packages
+    # Upstream's prebuilt vcpkg_installed.zip (1.10.0) predates the FFmpeg 8.1.2
+    # pin, so build the packages here and keep vcpkg's binary cache between runs.
+    # Ported from pyrowave-release.yml (fixes libavcodec version mismatch).
+    - name: Bootstrap vcpkg
+      id: vcpkg
       run: |
-        Invoke-WebRequest `
-          -Uri "https://github.com/TheElixZammuto/moonlight-xbox/releases/download/1.10.0/vcpkg_installed.zip" `
-          -OutFile .\vcpkg_installed.zip
+        .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+        "commit=$(git -C vcpkg rev-parse HEAD)" >> $env:GITHUB_OUTPUT
 
-    - name: Extract VCPKG packages
-      run: Expand-Archive .\vcpkg_installed.zip -DestinationPath .\
+    - name: Restore vcpkg binaries
+      id: vcpkg-cache
+      uses: actions/cache/restore@v4
+      with:
+        path: vcpkg-binary-cache
+        key: vcpkg-x64-uwp-${{ steps.vcpkg.outputs.commit }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: vcpkg-x64-uwp-
 
-    - name: List VCPKG packages
-      run: dir .\vcpkg_installed
+    - name: Install vcpkg packages
+      run: |
+        New-Item -ItemType Directory -Force vcpkg-binary-cache | Out-Null
+        # No --vcpkg-root: a relative one breaks vcpkg's nested tool downloads.
+        .\vcpkg\vcpkg.exe install --triplet x64-uwp --disable-metrics
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-    - name: Install VCPKG packages
-      run: .\vcpkg\bootstrap-vcpkg.bat
+    # Saved right away, so a later build failure doesn't throw the packages away.
+    - name: Save vcpkg binaries
+      if: steps.vcpkg-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: vcpkg-binary-cache
+        key: vcpkg-x64-uwp-${{ steps.vcpkg.outputs.commit }}-${{ hashFiles('vcpkg.json') }}
 
     - name: Build third party tools
       run: .\generate-thirdparty-projects.bat
