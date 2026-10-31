@@ -213,10 +213,11 @@ void PyroWaveDecoder::WriteCapture(const uint8_t *data, size_t length, int frame
 		Utils::Logf("PyroWave capture: wrote %s (%zu bytes)\n", name, length);
 }
 
-// Called by the VideoDec thread (CAPABILITY_DIRECT_SUBMIT)
+// Called on Moonlight's VideoDec worker thread (direct-submit disabled).
 int PyroWaveDecoder::SubmitDecodeUnit(PDECODE_UNIT decodeUnit) {
 	LARGE_INTEGER decodeStart, decodeEnd;
 	QueryPerformanceCounter(&decodeStart);
+	Stats::instance().SubmitDrainTelemetry(decodeUnit->fullLength, false);
 	if (m_StreamEpochQpc == 0)
 		m_StreamEpochQpc = decodeStart.QuadPart;
 
@@ -382,6 +383,7 @@ int PyroWaveDecoder::SubmitDecodeUnit(PDECODE_UNIT decodeUnit) {
 	Pacer::instance().submitFrame(frame);
 
 	Stats::instance().SubmitDecodeMs(QpcToMs(decodeEnd.QuadPart - decodeStart.QuadPart));
+	Stats::instance().SubmitDrainTelemetry(0, true);
 	return DR_OK;
 }
 

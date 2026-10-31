@@ -68,6 +68,7 @@ namespace moonlight_xbox_dx
 		void SubmitVideoBytesAndReassemblyTime(uint32_t length, PDECODE_UNIT decodeUnit, uint32_t droppedFrames);
 		void SubmitDecodeMs(double decodeMs);
 		void SubmitGpuDecodeMs(double gpuMs);
+		void SubmitDrainTelemetry(uint32_t bytes, bool decoded);
 		void SubmitDroppedFrame(int count);
 		void SubmitAvgQueueSize(float avgQueueSize);
 		void SubmitPacerTime(int64_t pacerTimeQpc);
@@ -102,6 +103,9 @@ namespace moonlight_xbox_dx
 		double                               m_avgMbpsSmoothed;
 		float                                m_gpuTimeMs;
 		uint32_t                             m_audioGlitchCount;
+		uint64_t                             m_drainBytes = 0;
+		uint32_t                             m_drainDecodedFrames = 0;
+		uint64_t                             m_drainWindowStartMs = 0;
 
 		FILE*                                m_logFile = nullptr;
 		DX::StepTimer                        m_logTimer; // last timer a block was written with

@@ -449,7 +449,9 @@ namespace moonlight_xbox_dx {
 		decoder_callbacks_sdl.setup = initCallback;
 		decoder_callbacks_sdl.cleanup = cleanupCallback;
 		decoder_callbacks_sdl.submitDecodeUnit = submitDecodeUnit;
-		decoder_callbacks_sdl.capabilities = CAPABILITY_DIRECT_SUBMIT | CAPABILITY_INTRA_REFRESH;
+		// Let Moonlight queue decode units to VideoDec instead of running PyroWave
+		// framing and GPU submission on the receive/reassembly callback.
+		decoder_callbacks_sdl.capabilities = CAPABILITY_INTRA_REFRESH;
 		return decoder_callbacks_sdl;
 	}
 }

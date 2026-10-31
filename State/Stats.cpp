@@ -36,6 +36,9 @@ void Stats::Reset()
 	ZeroMemory(&m_ActiveWndVideoStats, sizeof(VIDEO_STATS));
 	ZeroMemory(&m_LastWndVideoStats, sizeof(VIDEO_STATS));
 	ZeroMemory(&m_GlobalVideoStats, sizeof(VIDEO_STATS));
+	m_drainBytes = 0;
+	m_drainDecodedFrames = 0;
+	m_drainWindowStartMs = 0;
 }
 
 // Called every frame, if true is returned, the stats text is refreshed
@@ -212,6 +215,26 @@ void Stats::SubmitGpuDecodeMs(double gpuMs) {
 	std::lock_guard<std::mutex> lock(m_mutex);
 	m_ActiveWndVideoStats.totalGpuDecodeTime += gpuMs;
 	m_ActiveWndVideoStats.gpuTimedFrames++;
+}
+
+void Stats::SubmitDrainTelemetry(uint32_t bytes, bool decoded) {
+	std::lock_guard<std::mutex> lock(m_mutex);
+	const uint64_t nowMs = GetTickCount64();
+	if (m_drainWindowStartMs == 0)
+		m_drainWindowStartMs = nowMs;
+	m_drainBytes += bytes;
+	if (decoded)
+		++m_drainDecodedFrames;
+
+	const uint64_t elapsedMs = nowMs - m_drainWindowStartMs;
+	if (elapsedMs >= 1000) {
+		Utils::Logf("Video drain: %llu bytes/sec, %u decoded frames/sec\n",
+		            (unsigned long long)(m_drainBytes * 1000 / elapsedMs),
+		            (unsigned)(m_drainDecodedFrames * 1000 / elapsedMs));
+		m_drainBytes = 0;
+		m_drainDecodedFrames = 0;
+		m_drainWindowStartMs = nowMs;
+	}
 }
 
 void Stats::SubmitDroppedFrame(int count) {

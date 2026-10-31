@@ -213,8 +213,15 @@ bool Decoder::Decode(ID3D11DeviceContext *context11, PyroWaveD3D11::FrameSet *se
 	const int slot = m_nextSubmission;
 	Submission &sub = m_submissions[slot];
 	if (m_decodeFence->GetCompletedValue() < sub.fenceValue) {
-		if (SUCCEEDED(m_decodeFence->SetEventOnCompletion(sub.fenceValue, m_waitEvent)))
-			WaitForSingleObject(m_waitEvent, INFINITE);
+		if (FAILED(m_decodeFence->SetEventOnCompletion(sub.fenceValue, m_waitEvent))) {
+			Utils::Log("PyroWave D3D12: failed to arm allocator fence wait, dropping frame\n");
+			return false;
+		}
+		DWORD waitResult = WaitForSingleObject(m_waitEvent, 100);
+		if (waitResult != WAIT_OBJECT_0) {
+			Utils::Logf("PyroWave D3D12: allocator wait timed out or failed (result %lu), dropping frame\n", waitResult);
+			return false;
+		}
 	}
 	// A timing nobody polled before the slot came round again is simply dropped.
 	for (auto it = m_pendingTimings.begin(); it != m_pendingTimings.end(); ++it) {
