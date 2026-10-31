@@ -148,6 +148,7 @@ jobs:
           /p:AppxBundle=Always `
           /p:AppxPackageDir=output `
           /p:PackageCertificateKeyFile=cert.pfx `
+          /p:PackageCertificateThumbprint= `
           /p:UapAppxPackageBuildMode=SideLoadOnly `
           $certPasswordArg `
           ${{env.SOLUTION_FILE_PATH}}
