@@ -10,7 +10,7 @@
   <Identity
     Name="dimizago.MoonlightPyroWave"
 	Publisher="CN=CE07B73A-712E-4E05-932B-D08CE2C8A87C"
-    Version="1.18.1.16" />
+    Version="1.18.1.17" />
 
   <mp:PhoneIdentity PhoneProductId="6d2c1a5e-7b1f-4c3e-9a0d-5f3e2b8c9d41" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
