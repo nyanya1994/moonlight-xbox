@@ -26,6 +26,8 @@ typedef struct _VIDEO_STATS {
 	uint32_t totalFrames;
 	uint32_t networkDroppedFrames;
 	uint32_t pacerDroppedFrames;
+	uint32_t partialFrames;      // truncated frames rendered instead of dropped (PyroWave only)
+	uint64_t receivedBytes;      // video payload, for the stream stats log's whole-stream bitrate
 	uint32_t hitDeadlines;
 	uint32_t missedDeadlines;
 	uint16_t minHostProcessingLatency;
@@ -35,6 +37,8 @@ typedef struct _VIDEO_STATS {
 	uint32_t totalReassemblyTimeUs;
 	double totalDecodeTimeMs;
 	double totalGPUTimeMs;
+	double totalGpuDecodeTime;   // measured GPU time (PyroWave only)
+	uint32_t gpuTimedFrames;     // frames contributing to totalGpuDecodeTime
 	uint64_t totalPacerTimeUs;
 	uint64_t totalPreWaitTimeUs;
 	uint64_t totalRenderTimeUs;
@@ -63,6 +67,8 @@ namespace moonlight_xbox_dx
 		// submitters for various types of data
 		void SubmitVideoBytesAndReassemblyTime(uint32_t length, PDECODE_UNIT decodeUnit, uint32_t droppedFrames);
 		void SubmitDecodeMs(double decodeMs);
+		void SubmitGpuDecodeMs(double gpuMs);
+		void SubmitDrainTelemetry(uint32_t bytes, bool decoded);
 		void SubmitDroppedFrame(int count);
 		void SubmitAvgQueueSize(float avgQueueSize);
 		void SubmitPacerTime(int64_t pacerTimeQpc);
@@ -72,6 +78,11 @@ namespace moonlight_xbox_dx
 		void SubmitAudioGlitch();
 		uint32_t GetAudioGlitchCount();
 		void ResetAudioGlitchCount();
+
+		// Stream stats log (host setting "Log stream stats"): the overlay text once a
+		// second, whether or not the overlay is shown, then the whole-stream totals.
+		void BeginFileLog(const std::wstring& path, const std::string& header);
+		void EndFileLog();
 
 	private:
 		Stats();
@@ -92,5 +103,12 @@ namespace moonlight_xbox_dx
 		double                               m_avgMbpsSmoothed;
 		float                                m_gpuTimeMs;
 		uint32_t                             m_audioGlitchCount;
+		uint64_t                             m_drainBytes = 0;
+		uint32_t                             m_drainDecodedFrames = 0;
+		uint64_t                             m_drainWindowStartMs = 0;
+
+		FILE*                                m_logFile = nullptr;
+		DX::StepTimer                        m_logTimer; // last timer a block was written with
+		bool                                 m_logHasTimer = false;
 	};
 }

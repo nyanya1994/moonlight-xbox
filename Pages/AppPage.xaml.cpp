@@ -173,8 +173,10 @@ void AppPage::Connect(int appId) {
 	config->packetSize = host->PacketSize;
 	config->enableStats = host->EnableStats;
 	config->enableGraphs = host->EnableGraphs;
+	config->logStats = host->LogStats;
 
-	if (config->enableHDR) {
+	// H.264 has no 10-bit profile here; PyroWave and HEVC both handle HDR
+	if (config->enableHDR && config->videoCodec == "H.264") {
 		config->videoCodec = "HEVC (H.265)";
 	}
 
